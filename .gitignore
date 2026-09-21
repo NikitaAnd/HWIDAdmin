@@ -1,0 +1,27 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Forge / Minecraft runtime dirs
+run/
+run-data/
+logs/
+
+# Java
+*.class
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Maven
+target/
+
+# Local-only secrets (never commit your real HWID list)
+plugin/*.yml.bak

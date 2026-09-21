@@ -1,0 +1,24 @@
+name: HWIDAdmin
+version: '${project.version}'
+main: com.hwidadmin.HwidAdminPlugin
+api-version: '1.19'
+description: Kicks players whose client-sent HWID is not whitelisted.
+authors: [HWID Admin]
+
+commands:
+  hwidadmin:
+    description: HWIDAdmin admin commands (reload/status).
+    usage: /hwidadmin <reload|status>
+    permission: hwidadmin.admin
+
+permissions:
+  hwidadmin.admin:
+    description: Allows using /hwidadmin (reload/status).
+    default: op
+  hwidadmin.reload:
+    description: Allows /hwidadmin reload.
+    default: op
+  hwidadmin.status:
+    description: Allows /hwidadmin status.
+    default: op
+
