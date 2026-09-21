@@ -89,10 +89,10 @@ public final class HwidSender {
     private static void reportHwid(net.minecraft.commands.CommandSourceStack source) {
         String raw = HwidCollector.raw();
         String hash = HwidCollector.hash();
-        source.sendSuccess(Component.literal("— HWIDAdmin —").withStyle(ChatFormatting.GOLD), false);
-        source.sendSuccess(Component.literal("Провайдер: " + HwidCollector.providerName()).withStyle(ChatFormatting.GRAY), false);
-        source.sendSuccess(Component.literal("HWID hash: " + hash).withStyle(ChatFormatting.AQUA), false);
-        source.sendSuccess(Component.literal("(raw: " + raw + ")").withStyle(ChatFormatting.DARK_GRAY), false);
+        source.sendSuccess(() -> Component.literal("— HWIDAdmin —").withStyle(ChatFormatting.GOLD), false);
+        source.sendSuccess(() -> Component.literal("Провайдер: " + HwidCollector.providerName()).withStyle(ChatFormatting.GRAY), false);
+        source.sendSuccess(() -> Component.literal("HWID hash: " + hash).withStyle(ChatFormatting.AQUA), false);
+        source.sendSuccess(() -> Component.literal("(raw: " + raw + ")").withStyle(ChatFormatting.DARK_GRAY), false);
         HwidadminMod.log().info("HWIDAdmin: provider={}, raw={}, hash={}", HwidCollector.providerName(), raw, hash);
     }
 }
