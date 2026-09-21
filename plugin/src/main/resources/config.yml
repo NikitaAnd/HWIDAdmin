@@ -1,0 +1,42 @@
+# HWIDAdmin — server plugin configuration.
+#
+# HOW TO USE
+# ----------
+# 1. Give the client mod to people who may join with admin rights.
+#    (The mod itself NEVER contains any correct HWID.)
+# 2. Start the server once with this plugin installed. A default config is
+#    created here.
+# 3. Read the HWID of a machine in one of two ways:
+#      a) In the chat of that machine, run the in-game command  /hwid
+#         (the mod prints "Твой HWID: <hash>" on join by default);
+#      b) Check the server console/log: every unwhitelisted (kicked) client
+#         logs "[HWIDAdmin] Kicked <name> — HWID: <hash>".
+# 4. Add that hash to `allowed-hwids` below and reload:
+#      /hwidadmin reload   (or restart the server)
+#
+# SECURITY NOTE
+# -------------
+# Anyone can install the mod, but only machines whose HWID hash is listed
+# below are allowed to stay on the server. Foreign/leaked mod copies are
+# useless: their HWID simply won't match.
+
+channel: "hwidadmin:main"
+
+# Exact HWID hashes (SHA-256) that are allowed to connect.
+# Example (add your own):
+# allowed-hwids:
+#   - "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+allowed-hwids:
+  - "0000000000000000000000000000000000000000000000000000000000000000"
+
+# What happens when a client sends a HWID that is not in the list above.
+#  true  -> kick the player immediately (recommended).
+#  false -> just log + warn, let the player stay.
+kick-unlisted: true
+
+# Printed to the kicked player.
+kick-message: "&cДоступ запрещён: твой HWID не в белом списке."
+
+# Permissions:
+#   hwidadmin.reload  — use /hwidadmin reload
+#   hwidadmin.status  — use /hwidadmin status
