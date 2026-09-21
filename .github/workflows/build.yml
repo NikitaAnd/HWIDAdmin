@@ -33,11 +33,15 @@ jobs:
           {
             echo '## Forge mod build failed'
             echo '```'
-            tail -n 250 mod/gradle-build.log
+            tail -n 300 mod/gradle-build.log
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          # Emit as annotations so failures are readable via the Checks API.
-          tail -n 60 mod/gradle-build.log | while IFS= read -r line; do
+          # Emit KEY error lines first (readable via Checks API annotations).
+          grep -nE 'FAILED|error:|What went wrong|Caused by|Execution failed|Could not (resolve|find|determine|compile)|Unsupported|Exception|> Task' mod/gradle-build.log | while IFS= read -r line; do
+            echo "::error::${line}"
+          done
+          # Then the full tail for completeness.
+          tail -n 80 mod/gradle-build.log | while IFS= read -r line; do
             echo "::error::${line}"
           done
 
