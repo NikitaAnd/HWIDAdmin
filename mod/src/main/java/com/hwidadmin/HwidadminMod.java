@@ -31,7 +31,7 @@ public class HwidadminMod {
         MinecraftForge.EVENT_BUS.register(this);
 
         // Client config: print HWID to chat on join, and ping interval.
-        FMLJavaModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, CommonConfig.SPEC);
+        modBus.registerConfig(ModConfig.Type.CLIENT, CommonConfig.SPEC);
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
