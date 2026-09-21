@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   mod:
@@ -20,14 +20,29 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-
       - name: Build mod
-        run: ./gradlew build
+        id: modbuild
         working-directory: mod
+        run: |
+          ./gradlew build --console=plain --no-daemon --stacktrace > gradle-build.log 2>&1
+          echo "GRADLE_EXIT=$?" >> "$GITHUB_ENV"
+
+      - name: Surface mod failure log
+        if: failure()
+        run: |
+          {
+            echo '## Forge mod build failed'
+            echo '```'
+            tail -n 250 mod/gradle-build.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          # Emit as annotations so failures are readable via the Checks API.
+          tail -n 60 mod/gradle-build.log | while IFS= read -r line; do
+            echo "::error::${line}"
+          done
 
       - name: Upload mod artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: HWIDAdmin-mod
