@@ -95,10 +95,12 @@ jobs:
           name: HWIDAdmin-plugin
           path: artifacts/plugin
 
-      - name: List artifacts
+      - name: Normalize artifact names
         run: |
-          find artifacts -type f -print
-          ls -la artifacts/mod artifacts/plugin || true
+          mkdir -p out
+          for f in artifacts/mod/*.jar; do cp "$f" "out/HWIDAdmin-mod-1.0.0.jar"; done
+          for f in artifacts/plugin/*.jar; do cp "$f" "out/HWIDAdmin-plugin-1.0.0.jar"; done
+          ls -la out
 
       - name: Publish GitHub Release
         env:
@@ -123,12 +125,12 @@ jobs:
           if [ -z "$RLID" ]; then echo "::error::no release id"; exit 1; fi
 
           # 3) Upload each jar as an asset.
-          for f in artifacts/mod/*.jar artifacts/plugin/*.jar; do
+          for f in out/*.jar; do
             echo "-> uploading $(basename "$f")"
             gh api -X POST \
               "$(python3 -c "import json;print(json.load(open('/tmp/rel.json'))['upload_url'].split('{')[0])")?name=$(basename "$f")" \
               -H "Content-Type: application/octet-stream" \
-              --input "$f" >/tmp/up.json 2>/tmp/up.err || { echo "::error::asset upload failed for $(basename "$f"): $(head -c 400 /tmp/up.err)"; exit 1; }
+              --input "$f" >/tmp/up.json 2>/tmp/up.err || { echo "::error::asset upload failed for $(basename "$f"): $(head -c 500 /tmp/up.err)"; exit 1; }
             echo "   -> $(python3 -c "import json;d=json.load(open('/tmp/up.json'));print(d.get('name'), d.get('size'))" 2>/dev/null || true)"
           done
 
