@@ -50,7 +50,12 @@ CI_FILE=".github/workflows/build.yml"
 
 # Resolve the base commit. Prefer the remote-tracking ref, but also accept a
 # raw local ref/commit (useful when the remote is unreachable).
-git fetch "$REMOTE" "$BASE_REF" --quiet || echo "note: fetch of $REMOTE $BASE_REF failed; resolving locally if possible"
+# A plain `git fetch <remote> <ref>` only updates FETCH_HEAD, not the
+# remote-tracking ref; use an explicit refspec (with `+` to allow force-pushes)
+# so ${REMOTE}/${BASE_REF} always reflects the current remote tip.
+git fetch "$REMOTE" "+${BASE_REF}:refs/remotes/${REMOTE}/${BASE_REF}" --quiet \
+    || git fetch "$REMOTE" "$BASE_REF" --quiet \
+    || echo "note: fetch of $REMOTE $BASE_REF failed; resolving locally if possible"
 if git rev-parse --verify --quiet "${REMOTE}/${BASE_REF}^{commit}" >/dev/null 2>&1; then
     BASE="$(git rev-parse "${REMOTE}/${BASE_REF}^{commit}")"
     BASE_NAME="${REMOTE}/${BASE_REF}"
