@@ -109,12 +109,8 @@ jobs:
             REPO="$GITHUB_REPOSITORY"
 
             echo "-> cleaning stale release/tag 'latest'"
-            RID="$(gh api "repos/$REPO/releases/tags/latest" --jq '.id' 2>/dev/null || echo '')"
-            if [ -n "$RID" ]; then
-              echo "   deleting release id=$RID"
-              gh api -X DELETE "repos/$REPO/releases/$RID" || echo "warn: release delete failed"
-            fi
-            gh api -X DELETE "repos/$REPO/git/refs/tags/latest" 2>/dev/null || echo "   no tag to delete"
+            # Best-effort cleanup: ignore "not found" (404) and "reference does not exist" (422).
+            gh release delete latest --repo "$REPO" --cleanup-tag --yes 2>/dev/null || echo "   (no stale release or tag)"
             sleep 2
 
             ls -la artifacts/mod artifacts/plugin || true
@@ -132,4 +128,5 @@ jobs:
             tail -n 60 /tmp/publish.log | while IFS= read -r l; do echo "::error::$l"; done
             exit "$ec"
           fi
+
 
