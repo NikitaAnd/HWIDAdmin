@@ -1,6 +1,5 @@
 package com.hwidadmin;
 
-import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.network.ChannelBuilder;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.SimpleChannel;
@@ -21,7 +20,7 @@ public final class Net {
     // channel (a vanilla Bukkit/Spigot/Paper server does not participate in
     // the Forge mod-list handshake at all).
     private static final SimpleChannel CHANNEL = ChannelBuilder
-            .named(new ResourceLocation(CHANNEL_NAME))
+            .named(CHANNEL_NAME)
             .networkProtocolVersion(PROTOCOL)
             .optional()
             .simpleChannel();
