@@ -95,16 +95,17 @@ jobs:
           name: HWIDAdmin-plugin
           path: artifacts/plugin
 
-      - name: Publish rolling release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: List artifacts
         run: |
-          set -e
-          gh release delete latest --cleanup-tag --yes 2>/dev/null || true
-          # give GitHub a moment to release the tag
-          sleep 3
-          gh release create latest \
-            artifacts/mod/*.jar \
-            artifacts/plugin/*.jar \
-            --title "HWIDAdmin build $(date -u +%Y-%m-%d)" \
-            --notes "Auto-built from commit $(git rev-parse --short HEAD). Mod = Forge 1.20.1 client; plugin = Spigot/Paper 1.20.1."
+          find artifacts -type f -print
+          ls -la artifacts/mod artifacts/plugin || true
+
+      - name: Publish rolling release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "HWIDAdmin build ${{ github.run_number }}"
+          files: |
+            artifacts/mod/*.jar
+            artifacts/plugin/*.jar
+          body: "Auto-built from commit ${{ github.sha }}. Mod = Forge 1.20.1 client; plugin = Spigot/Paper 1.20.1."
