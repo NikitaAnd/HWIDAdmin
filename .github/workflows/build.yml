@@ -2,7 +2,7 @@ name: build
 
 on:
   push:
-    branches: [main, 'arena/**']
+    branches: [main, 'arena/**', 'minecraft/**']
   workflow_dispatch:
 
 permissions:
@@ -10,21 +10,108 @@ permissions:
 
 jobs:
   # ---------------------------------------------------------------------------
-  # Forge client mods — one job per Minecraft version.
+  # Version discovery.
+  #
+  # Supports both repository layouts:
+  #   - multi-version  (main / arena/**):  mod/<mc>/…  plugin/<mc>/…
+  #   - single-version (minecraft/**):     mod/…       plugin/…   at repo root
+  #
+  # It detects the Minecraft version per subdirectory (multi-version) or from
+  # the mod's build files (single-version) and emits a JSON matrix consumed by
+  # the build jobs below.
+  # ---------------------------------------------------------------------------
+  setup-matrix:
+    name: Detect versions
+    runs-on: ubuntu-22.04
+    outputs:
+      list: ${{ steps.detect.outputs.list }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect versions
+        id: detect
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, pathlib, re
+
+          MOD = pathlib.Path('mod')
+          PLUGIN = pathlib.Path('plugin')
+
+          def is_multi(root, marker):
+              # multi-version iff the markers live in <root>/<version>/<marker>,
+              # single-version iff the marker is directly at <root>/<marker>.
+              if not root.is_dir() or (root / marker).is_file():
+                  return False
+              return any(p.is_dir() and (p / marker).is_file()
+                         for p in root.iterdir())
+
+          multi_mod = is_multi(MOD, 'build.gradle')
+          multi_plugin = is_multi(PLUGIN, 'pom.xml')
+
+          def java_for(version):
+              return 21 if version.startswith('1.21') else 17
+
+          include = []
+          if multi_mod or multi_plugin:
+              # multi-version layout: one version per subdirectory
+              vers = set()
+              if multi_mod:
+                  vers |= {p.name for p in MOD.iterdir()
+                           if p.is_dir() and (p / 'build.gradle').is_file()}
+              if multi_plugin:
+                  vers |= {p.name for p in PLUGIN.iterdir()
+                           if p.is_dir() and (p / 'pom.xml').is_file()}
+              order = {'1.19.2': 0, '1.19.4': 1, '1.20.1': 2,
+                       '1.20.4': 3, '1.21.1': 4, '1.21.4': 5}
+              for v in sorted(vers, key=lambda x: (order.get(x, 99), x)):
+                  mdir = MOD / v
+                  pdir = PLUGIN / v
+                  include.append({
+                      'version': v,
+                      'java': java_for(v),
+                      'modDir': str(mdir) if mdir.is_dir() else '',
+                      'pluginDir': str(pdir) if pdir.is_dir() else '',
+                  })
+          else:
+              # single-version layout (minecraft/* branches): mod/ + plugin/ at root
+              mdir = 'mod' if (MOD / 'build.gradle').is_file() else ''
+              pdir = 'plugin' if (PLUGIN / 'pom.xml').is_file() else ''
+              if mdir or pdir:
+                  version = 'unknown'
+                  gp = MOD / 'gradle.properties'
+                  if gp.is_file():
+                      for line in gp.read_text().splitlines():
+                          if line.startswith('minecraft_version='):
+                              version = line.split('=', 1)[1].strip()
+                              break
+                  if version == 'unknown':
+                      bg = MOD / 'build.gradle'
+                      if bg.is_file():
+                          m = re.search(r"mappings[^\n]*version:\s*'(1\.[0-9]+\.[0-9]+)'",
+                                        bg.read_text())
+                          if m:
+                              version = m.group(1)
+                  include.append({
+                      'version': version,
+                      'java': java_for(version),
+                      'modDir': mdir,
+                      'pluginDir': pdir,
+                  })
+
+          print('list=' + json.dumps({'include': include}))
+          PY
+
+  # ---------------------------------------------------------------------------
+  # Forge client mods — one job per detected version.
   # ---------------------------------------------------------------------------
   mod:
-    name: Forge mod (${{ matrix.mc }})
+    name: Forge mod (${{ matrix.version }})
+    needs: setup-matrix
     runs-on: ubuntu-22.04
+    if: matrix.modDir != ''
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - { mc: '1.19.2', java: 17, dir: mod/1.19.2 }
-          - { mc: '1.19.4', java: 17, dir: mod/1.19.4 }
-          - { mc: '1.20.1', java: 17, dir: mod/1.20.1 }
-          - { mc: '1.20.4', java: 17, dir: mod/1.20.4 }
-          - { mc: '1.21.1', java: 21, dir: mod/1.21.1 }
-          - { mc: '1.21.4', java: 21, dir: mod/1.21.4 }
+      matrix: ${{ fromJson(needs.setup-matrix.outputs.list) }}
     steps:
       - uses: actions/checkout@v4
 
@@ -34,26 +121,24 @@ jobs:
           java-version: ${{ matrix.java }}
 
       - name: Build mod
-        id: modbuild
-        working-directory: ${{ matrix.dir }}
+        working-directory: ${{ matrix.modDir }}
         run: |
           chmod +x ./gradlew
           ./gradlew build --console=plain --no-daemon --stacktrace > gradle-build.log 2>&1
-          echo "GRADLE_EXIT=$?" >> "$GITHUB_ENV"
 
       - name: Surface mod failure log
         if: failure()
         run: |
           {
-            echo '## Forge mod build failed (${{ matrix.mc }})'
+            echo '## Forge mod build failed (${{ matrix.version }})'
             echo '```'
-            tail -n 300 "${{ matrix.dir }}/gradle-build.log"
+            tail -n 300 "${{ matrix.modDir }}/gradle-build.log"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          grep -nE 'FAILED|error:|What went wrong|Caused by|Execution failed|Could not (resolve|find|determine|compile)|Unsupported|Exception class|> Task' "${{ matrix.dir }}/gradle-build.log" | while IFS= read -r line; do
+          grep -nE 'FAILED|error:|What went wrong|Caused by|Execution failed|Could not (resolve|find|determine|compile)|Unsupported|Exception class|> Task' "${{ matrix.modDir }}/gradle-build.log" | while IFS= read -r line; do
             echo "::error::${line}"
           done
-          tail -n 80 "${{ matrix.dir }}/gradle-build.log" | while IFS= read -r line; do
+          tail -n 80 "${{ matrix.modDir }}/gradle-build.log" | while IFS= read -r line; do
             echo "::error::${line}"
           done
 
@@ -61,28 +146,23 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: HWIDAdmin-mod-${{ matrix.mc }}
+          name: HWIDAdmin-mod-${{ matrix.version }}
           path: |
-            ${{ matrix.dir }}/build/libs/*.jar
-            !${{ matrix.dir }}/build/libs/*-sources.jar
-            !${{ matrix.dir }}/build/libs/*-dev-shadow.jar
+            ${{ matrix.modDir }}/build/libs/*.jar
+            !${{ matrix.modDir }}/build/libs/*-sources.jar
+            !${{ matrix.modDir }}/build/libs/*-dev-shadow.jar
 
   # ---------------------------------------------------------------------------
-  # Bukkit/Spigot/Paper plugins — one job per Minecraft version.
+  # Bukkit/Spigot/Paper plugins — one job per detected version.
   # ---------------------------------------------------------------------------
   plugin:
-    name: Bukkit plugin (${{ matrix.mc }})
+    name: Bukkit plugin (${{ matrix.version }})
+    needs: setup-matrix
     runs-on: ubuntu-22.04
+    if: matrix.pluginDir != ''
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - { mc: '1.19.2', java: 17, dir: plugin/1.19.2 }
-          - { mc: '1.19.4', java: 17, dir: plugin/1.19.4 }
-          - { mc: '1.20.1', java: 17, dir: plugin/1.20.1 }
-          - { mc: '1.20.4', java: 17, dir: plugin/1.20.4 }
-          - { mc: '1.21.1', java: 21, dir: plugin/1.21.1 }
-          - { mc: '1.21.4', java: 21, dir: plugin/1.21.4 }
+      matrix: ${{ fromJson(needs.setup-matrix.outputs.list) }}
     steps:
       - uses: actions/checkout@v4
 
@@ -92,24 +172,27 @@ jobs:
           java-version: ${{ matrix.java }}
 
       - name: Build plugin
-        working-directory: ${{ matrix.dir }}
+        working-directory: ${{ matrix.pluginDir }}
         run: mvn -B -ntp package
 
       - name: Upload plugin artifact
         uses: actions/upload-artifact@v4
         with:
-          name: HWIDAdmin-plugin-${{ matrix.mc }}
+          name: HWIDAdmin-plugin-${{ matrix.version }}
           path: |
-            ${{ matrix.dir }}/target/*.jar
-            !${{ matrix.dir }}/target/*-sources.jar
+            ${{ matrix.pluginDir }}/target/*.jar
+            !${{ matrix.pluginDir }}/target/*-sources.jar
 
   # ---------------------------------------------------------------------------
-  # Aggregate release — downloads all artifacts and attaches them to one
-  # GitHub Release with unique, version-specific names.
+  # Aggregate release — attaches all built jars to one GitHub Release with
+  # unique, version-specific names.
   # ---------------------------------------------------------------------------
   release:
     name: Publish GitHub Release
     needs: [mod, plugin]
+    # Only aggregate a full release for the multi-version branches. Per-version
+    # branches (minecraft/*) still build + upload artifacts, but don't release.
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/arena/')
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -124,8 +207,7 @@ jobs:
           mkdir -p out
           # download-artifact extracts each artifact into
           # artifacts/<artifact-name>/…, where <artifact-name> is already the
-          # desired release asset name (e.g. HWIDAdmin-mod-1.20.1). Inside it,
-          # the built jar is hwidadmin-1.0.0.jar / HWIDAdmin-1.0.0.jar.
+          # desired release asset name (e.g. HWIDAdmin-mod-1.20.1).
           find artifacts -mindepth 2 -type f -name '*.jar' | sort | while IFS= read -r f; do
             name="$(echo "$f" | cut -d/ -f2)"
             cp "$f" "out/${name}.jar"
@@ -148,7 +230,7 @@ jobs:
           gh api -X POST "repos/$REPO/releases" \
             -f tag_name="$TAG" \
             -f name="HWIDAdmin build $GITHUB_RUN_NUMBER" \
-            -f body="Auto-built from commit $GITHUB_SHA (branch $GITHUB_REF_NAME). Includes Forge mods and Bukkit plugins for Minecraft 1.19.2, 1.19.4, 1.20.1, 1.20.4, 1.21.1, 1.21.4." \
+            -f body="Auto-built from commit $GITHUB_SHA (branch $GITHUB_REF_NAME)." \
             >/tmp/rel.json 2>/tmp/rel.err || { echo "::error::release create failed: $(head -c 400 /tmp/rel.err)"; exit 1; }
           cat /tmp/rel.json | head -c 300; echo
           RLID="$(python3 -c "import json;print(json.load(open('/tmp/rel.json')).get('id',''))" 2>/dev/null || true)"

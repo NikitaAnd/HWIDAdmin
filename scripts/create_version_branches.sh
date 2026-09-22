@@ -46,6 +46,7 @@ fi
 
 VERSIONS="1.19.2 1.19.4 1.20.1 1.20.4 1.21.1 1.21.4"
 KEEP_FILES="README.md LICENSE .gitignore"
+CI_FILE=".github/workflows/build.yml"
 
 # Resolve the base commit. Prefer the remote-tracking ref, but also accept a
 # raw local ref/commit (useful when the remote is unreachable).
@@ -101,7 +102,8 @@ for ver in $VERSIONS; do
     git read-tree --empty >/dev/null
     git read-tree --prefix=mod/ "${BASE}:mod/${ver}"
 
-    # Include the base project files at the root (README.md, LICENSE, .gitignore).
+    # Include the base project files at the root (README.md, LICENSE, .gitignore)
+    # plus the CI workflow (it self-detects the single-version layout).
     for rel in $KEEP_FILES; do
         if git cat-file -e "${BASE}:${rel}" 2>/dev/null; then
             mode="$(git ls-tree "$BASE" -- "$rel" | awk '{print $1}')"
@@ -109,6 +111,11 @@ for ver in $VERSIONS; do
             git update-index --add --cacheinfo "${mode},${blob},${rel}"
         fi
     done
+    if git cat-file -e "${BASE}:${CI_FILE}" 2>/dev/null; then
+        mode="$(git ls-tree "$BASE" -- "$CI_FILE" | awk '{print $1}')"
+        blob="$(git rev-parse "${BASE}:${CI_FILE}")"
+        git update-index --add --cacheinfo "${mode},${blob},${CI_FILE}"
+    fi
     git read-tree --prefix=plugin/ "${BASE}:plugin/${ver}"
 
     tree="$(git write-tree)"
