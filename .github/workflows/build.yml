@@ -115,18 +115,50 @@ jobs:
 
             ls -la artifacts/mod artifacts/plugin || true
 
-            echo "-> creating release"
-            gh release create latest \
-              --repo "$REPO" \
-              --title "HWIDAdmin build $GITHUB_RUN_NUMBER" \
-              --notes "Auto-built from commit $GITHUB_SHA. Mod = Forge 1.20.1 client; plugin = Spigot/Paper 1.20.1." \
-              artifacts/mod/*.jar artifacts/plugin/*.jar
-            echo "-> release published OK"
+            echo "-> creating tag"
+            gh api -X POST "repos/$REPO/git/refs" \
+              -f ref="refs/tags/latest" \
+              -f sha="$GITHUB_SHA" >/dev/null || { echo "note: tag create failed (may already exist)"; }
+
+            echo "-> creating release via REST"
+            gh api -X POST "repos/$REPO/releases" \
+              -f tag_name="latest" \
+              -f name="HWIDAdmin build $GITHUB_RUN_NUMBER" \
+              -f body="Auto-built from commit $GITHUB_SHA. Mod = Forge 1.20.1 client; plugin = Spigot/Paper 1.20.1." \
+              >/tmp/release.json || true
+
+            cat /tmp/release.json 2>/dev/null | head -c 500; echo
+
+            UPID="$(python3 -c "import json;d=json.load(open('/tmp/release.json'));print(d.get('id',''))" 2>/dev/null || true)"
+            if [ -z "$UPID" ]; then
+              echo "::error::could not create release; response above"
+              exit 1
+            fi
+            echo "   release id = $UPID"
+
+            echo "-> uploading assets"
+            for f in artifacts/mod/*.jar artifacts/plugin/*.jar; do
+              [ -f "$f" ] || continue
+              base="$(basename "$f")"
+              echo "   uploading $base"
+              resp="$(gh api -X POST "repos/$REPO/releases/$UPID/assets?name=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote('$base'))")" \
+                -H "Content-Type: application/java-archive" \
+                --input "$f" 2>&1 || true)"
+              if echo "$resp" | grep -q '"browser_download_url"'; then
+                echo "   OK: $base"
+              else
+                echo "::error::failed to upload $base: $(echo "$resp" | head -c 400)"
+              fi
+            done
+
+            echo "-> done. Release assets:"
+            gh api "repos/$REPO/releases/$UPID" --jq '.assets[] | .name + \" (\" + (.size|tostring) + \" bytes)\"' 2>/dev/null || true
           } 2>&1 | tee /tmp/publish.log
           ec="${PIPESTATUS[0]}"
           if [ "$ec" -ne 0 ]; then
             tail -n 60 /tmp/publish.log | while IFS= read -r l; do echo "::error::$l"; done
             exit "$ec"
           fi
+
 
 
