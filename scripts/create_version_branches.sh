@@ -88,11 +88,11 @@ for ver in $VERSIONS; do
     fi
 
     # Verify the source subtrees exist before mutating anything.
-    if ! git cat-file -e "${BASE}:mod/${ver}^{tree}" 2>/dev/null; then
+    if ! git cat-file -e "${BASE}:mod/${ver}" 2>/dev/null; then
         echo "!! base ${BASE_NAME} has no mod/${ver}; skipping ${branch}" >&2
         continue
     fi
-    if ! git cat-file -e "${BASE}:plugin/${ver}^{tree}" 2>/dev/null; then
+    if ! git cat-file -e "${BASE}:plugin/${ver}" 2>/dev/null; then
         echo "!! base ${BASE_NAME} has no plugin/${ver}; skipping ${branch}" >&2
         continue
     fi
