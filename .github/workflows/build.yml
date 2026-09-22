@@ -108,7 +108,6 @@ jobs:
     name: Forge mod (${{ matrix.version }})
     needs: setup-matrix
     runs-on: ubuntu-22.04
-    if: matrix.modDir != ''
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.setup-matrix.outputs.list) }}
@@ -159,7 +158,6 @@ jobs:
     name: Bukkit plugin (${{ matrix.version }})
     needs: setup-matrix
     runs-on: ubuntu-22.04
-    if: matrix.pluginDir != ''
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.setup-matrix.outputs.list) }}
