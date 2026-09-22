@@ -2,6 +2,7 @@ package com.hwidadmin;
 
 import com.mojang.logging.LogUtils;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -31,7 +32,7 @@ public class HwidadminMod {
         MinecraftForge.EVENT_BUS.register(this);
 
         // Client config: print HWID to chat on join, and ping interval.
-        modBus.registerConfig(ModConfig.Type.CLIENT, CommonConfig.SPEC);
+        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, CommonConfig.SPEC);
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
