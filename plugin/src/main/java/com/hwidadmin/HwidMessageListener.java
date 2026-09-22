@@ -39,6 +39,12 @@ public final class HwidMessageListener implements PluginMessageListener {
             return;
         }
 
+        // Only enforce the HWID check for protected players (OP or holders of
+        // the configured permission nodes). Regular players are ignored.
+        if (!checker.isProtected(player)) {
+            return;
+        }
+
         String hwid;
         try {
             hwid = parseHwid(message);

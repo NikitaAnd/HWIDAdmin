@@ -1,6 +1,7 @@
 package com.hwidadmin;
 
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.Collections;
@@ -23,6 +24,8 @@ public final class HwidChecker {
     private volatile Set<String> allowedHwids = Collections.emptySet();
     private volatile boolean kickUnlisted = true;
     private volatile String kickMessage = "&cДоступ запрещён: твой HWID не в белом списке.";
+    private volatile boolean checkOp = true;
+    private volatile Set<String> requiredPermissions = Collections.emptySet();
 
     public HwidChecker(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -61,6 +64,16 @@ public final class HwidChecker {
 
         kickUnlisted = cfg.getBoolean("kick-unlisted", true);
         kickMessage = cfg.getString("kick-message", "&cДоступ запрещён: твой HWID не в белом списке.");
+
+        checkOp = cfg.getBoolean("check-op", true);
+
+        Set<String> perms = new HashSet<>();
+        for (String raw : cfg.getStringList("required-permissions")) {
+            if (raw != null && !raw.trim().isEmpty()) {
+                perms.add(raw.trim());
+            }
+        }
+        requiredPermissions = Collections.unmodifiableSet(perms);
     }
 
     public String getChannelName() {
@@ -77,6 +90,31 @@ public final class HwidChecker {
 
     public String getKickMessage() {
         return kickMessage;
+    }
+
+    public boolean isCheckOp() {
+        return checkOp;
+    }
+
+    public Set<String> getRequiredPermissions() {
+        return requiredPermissions;
+    }
+
+    /**
+     * True when the player must pass the HWID check: either a server OP, or
+     * holding at least one of the permission nodes from {@code required-permissions}.
+     * Everyone else is ignored by the HWID check.
+     */
+    public boolean isProtected(Player player) {
+        if (checkOp && player.isOp()) {
+            return true;
+        }
+        for (String perm : requiredPermissions) {
+            if (player.hasPermission(perm)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** True when the given (already normalised) HWID is in the whitelist. */
