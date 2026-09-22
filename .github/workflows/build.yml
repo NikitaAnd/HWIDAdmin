@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   mod:
@@ -36,11 +36,9 @@ jobs:
             tail -n 300 mod/gradle-build.log
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          # Emit KEY error lines first (readable via Checks API annotations).
           grep -nE 'FAILED|error:|What went wrong|Caused by|Execution failed|Could not (resolve|find|determine|compile)|Unsupported|Exception|> Task' mod/gradle-build.log | while IFS= read -r line; do
             echo "::error::${line}"
           done
-          # Then the full tail for completeness.
           tail -n 80 mod/gradle-build.log | while IFS= read -r line; do
             echo "::error::${line}"
           done
@@ -77,3 +75,36 @@ jobs:
           path: |
             plugin/target/*.jar
             !plugin/target/*-sources.jar
+
+  release:
+    name: Publish GitHub Release
+    needs: [mod, plugin]
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download mod artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: HWIDAdmin-mod
+          path: artifacts/mod
+
+      - name: Download plugin artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: HWIDAdmin-plugin
+          path: artifacts/plugin
+
+      - name: Publish rolling release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          gh release delete latest --cleanup-tag --yes 2>/dev/null || true
+          # give GitHub a moment to release the tag
+          sleep 3
+          gh release create latest \
+            artifacts/mod/*.jar \
+            artifacts/plugin/*.jar \
+            --title "HWIDAdmin build $(date -u +%Y-%m-%d)" \
+            --notes "Auto-built from commit $(git rev-parse --short HEAD). Mod = Forge 1.20.1 client; plugin = Spigot/Paper 1.20.1."
