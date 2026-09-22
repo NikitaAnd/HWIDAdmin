@@ -141,13 +141,8 @@ jobs:
               [ -f "$f" ] || continue
               base="$(basename "$f")"
               echo "   uploading $base"
-              enc="$(python3 - <<PYQ
-import urllib.parse
-print(urllib.parse.quote("$base"))
-PYQ
-)"
               # Upload binary asset. Must be raw octet-stream.
-              resp="$(gh api -X POST "repos/$REPO/releases/$UPID/assets?name=$enc" \
+              resp="$(gh api -X POST "repos/$REPO/releases/$UPID/assets?name=${base}" \
                 -H "Content-Type: application/octet-stream" \
                 --input "$f" 2>&1 || true)"
               if echo "$resp" | grep -q '"browser_download_url"'; then
