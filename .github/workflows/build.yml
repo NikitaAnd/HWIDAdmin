@@ -100,13 +100,12 @@ jobs:
           find artifacts -type f -print
           ls -la artifacts/mod artifacts/plugin || true
 
-      - name: Publish rolling release
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: latest
-          target_commitish: ${{ github.sha }}
+          tag_name: build-${{ github.run_number }}
           name: "HWIDAdmin build ${{ github.run_number }}"
-          body: "Auto-built from commit ${{ github.sha }}. Mod = Forge 1.20.1 client; plugin = Spigot/Paper 1.20.1."
+          body: "Auto-built from commit ${{ github.sha }} (branch ${{ github.ref_name }}). Mod = Forge 1.20.1 client; plugin = Spigot/Paper 1.20.1."
           files: |
             artifacts/mod/*.jar
             artifacts/plugin/*.jar
