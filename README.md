@@ -1,8 +1,11 @@
 # HWIDAdmin
 
-Пара «мод + плагин» для Minecraft **1.20.1**, которая даёт попасть на сервер
-(и остаться на нём) только игрокам, чей **HWID** компьютера есть в белом списке
-на сервере.
+Пара «мод + плагин» для Minecraft, которая даёт попасть на сервер (и остаться
+на нём) только игрокам, чей **HWID** компьютера есть в белом списке на сервере.
+
+Поддерживаемые версии Minecraft: **1.19.2 · 1.19.4 · 1.20.1 · 1.20.4 ·
+1.21.1 · 1.21.4** (для каждой — свой Forge-мод для клиента и свой
+Spigot/Paper-плагин для сервера).
 
 ## Как это работает
 
@@ -17,47 +20,60 @@
 > но HWID компьютера не совпадёт → кик. HWID администратора никто посторонний
 > не знает, потому что он хранится только в конфиге на сервере.
 
-## Состав репозитория
+## Структура репозитория
 
 ```
-mod/     — Forge-мод для клиента (Minecraft 1.20.1, Forge 47.x, Java 17)
-plugin/  — Bukkit/Spigot/Paper плагин (spigot-api 1.20.1-R0.1-SNAPSHOT)
+mod/<версия>/     — Forge-мод для клиента (1.19.2, 1.19.4, 1.20.1, 1.20.4, 1.21.1, 1.21.4)
+plugin/<версия>/  — Bukkit/Spigot/Paper плагин для тех же версий
+scripts/          — служебные скрипты
 ```
+
+| Версия | Forge | Java | Gradle | Сетевой API Forge |
+| --- | --- | --- | --- | --- |
+| 1.19.2 | 43.5.0 | 17 | 8.8 | SimpleChannel (NetworkRegistry) |
+| 1.19.4 | 45.4.0 | 17 | 8.8 | SimpleChannel (NetworkRegistry) |
+| 1.20.1 | 47.2.0 | 17 | 8.8 | SimpleChannel (NetworkRegistry) |
+| 1.20.4 | 49.2.0 | 17 | 8.12.1 | SimpleChannel (ChannelBuilder) |
+| 1.21.1 | 52.1.0 | 21 | 8.12.1 | SimpleChannel (ChannelBuilder) |
+| 1.21.4 | 54.1.14 | 21 | 8.12.1 | SimpleChannel (ChannelBuilder) |
 
 ## Сборка
 
-Готовые jar-файлы собираются автоматически при каждом пуше (GitHub Actions)
-и публикуются в **GitHub Releases**. Свежую сборку всегда можно скачать здесь:
+Готовые jar-файлы собираются автоматически при каждом пуше (GitHub Actions,
+матрица по всем шести версиям) и публикуются одним **GitHub Release**. Имена
+ресурсов выпуска:
 
-- **Мод (Forge 1.20.1):** `HWIDAdmin-mod-1.0.0.jar`
-- **Плагин (Spigot/Paper 1.20.1):** `HWIDAdmin-plugin-1.0.0.jar`
+- **Мод:** `HWIDAdmin-mod-<версия>.jar` (например, `HWIDAdmin-mod-1.20.1.jar`)
+- **Плагин:** `HWIDAdmin-plugin-<версия>.jar` (например, `HWIDAdmin-plugin-1.20.1.jar`)
 
 Ссылка на последний выпуск:
 `https://github.com/NikitaAnd/HWIDAdmin/releases/latest`
 (или вкладка **Releases** репозитория → выбрать сборку **build-N**).
 
-Собрать вручную:
-
-Требования: JDK 17, Gradle 8.8 (для мода, через встроенный `gradlew`), Maven 3.9+ (для плагина).
+Собрать вручную (для любой из поддерживаемых версий):
 
 ```bash
-# мод
-cd mod
-./gradlew build            # результат: mod/build/libs/hwidadmin-1.0.0.jar
+# мод (пример для 1.20.1)
+cd mod/1.20.1
+./gradlew build            # результат: mod/1.20.1/build/libs/hwidadmin-1.0.0.jar
 
-# плагин
-cd ../plugin
-mvn -B package             # результат: plugin/target/HWIDAdmin-1.0.0.jar
+# плагин (пример для 1.20.1)
+cd ../../plugin/1.20.1
+mvn -B package             # результат: plugin/1.20.1/target/HWIDAdmin-1.0.0.jar
 ```
+
+Требования: JDK 17 (для 1.19.x/1.20.x) или JDK 21 (для 1.21.x), встроенный
+`gradlew` (версии указаны в таблице выше), Maven 3.9+ для плагина.
 
 ## Установка
 
 **Плагин:**
-1. Положи `HWIDAdmin-<version>.jar` в `plugins/` сервера (Spigot/Paper 1.20.1).
+1. Положи `HWIDAdmin-plugin-<версия>.jar` в `plugins/` сервера
+   (Spigot/Paper той же версии).
 2. Перезапусти сервер — появится `plugins/HWIDAdmin/config.yml`.
 
 **Мод:**
-1. Установи **Forge 47.x для 1.20.1** (если ещё не стоит).
+1. Установи Forge нужной версии (см. таблицу выше), если ещё не стоит.
 2. Положи `hwidadmin-1.0.0.jar` в папку `mods` клиента.
 
 ## Первая настройка (главное)
@@ -139,6 +155,33 @@ LuckPerms) и вписать это право в `required-permissions` — т�
 - Канал: `hwidadmin:main` (plugin-messaging). Плагин слушает его через
   `registerIncomingPluginChannel`.
 - Мод — строго клиентский (`clientSideOnly = true`), на серверной стороне не грузится.
+- Для 1.21.x используется только **Forge** (не NeoForge); для 1.20.4+ мод собран
+  на новом сетевом API Forge (`ChannelBuilder`), для 1.19.x/1.20.1 — на старом.
+
+## Ветки для версий
+
+Репозиторий содержит по ветке на версию Minecraft:
+
+```
+minecraft/1.19.2
+minecraft/1.19.4
+minecraft/1.20.1
+minecraft/1.20.4
+minecraft/1.21.1
+minecraft/1.21.4
+```
+
+В каждой ветке лежат только мод и плагин для своей версии (в корне, как
+`mod/` и `plugin/`). Чтобы пересоздать/обновить их одним махом в любом форке,
+выполни:
+
+```bash
+./scripts/create_version_branches.sh <remote> <base-ref>
+# пример: ./scripts/create_version_branches.sh origin main
+```
+
+Скрипт идемпотентен: уже существующие ветки он не ломает (если ветка есть —
+он её пропустит или, с флагом `--force`, пересоздаст с нужного базового коммита).
 
 ## Лицензия
 
