@@ -26,18 +26,19 @@ plugin/  — Bukkit/Spigot/Paper плагин (spigot-api 1.20.1-R0.1-SNAPSHOT)
 
 ## Сборка
 
-В репозитории нет готовых `.jar` (артефакты грузятся через GitHub Actions, см.
-раздел «Artefacts / Releases»). Собрать можно двумя способами:
+Готовые jar-файлы собираются автоматически при каждом пуше (GitHub Actions)
+и публикуются в **GitHub Releases**. Свежую сборку всегда можно скачать здесь:
 
-### 1) GitHub Actions (проще всего)
+- **Мод (Forge 1.20.1):** `HWIDAdmin-mod-1.0.0.jar`
+- **Плагин (Spigot/Paper 1.20.1):** `HWIDAdmin-plugin-1.0.0.jar`
 
-- Пуш в ветку → вкладка **Actions** → workflow **build**.
-- Два артефакта: `HWIDAdmin-mod` и `HWIDAdmin-plugin`.
-- Раннеры GitHub скачивают все Maven-зависимости автоматически.
+Ссылка на последний выпуск:
+`https://github.com/NikitaAnd/HWIDAdmin/releases/latest`
+(или вкладка **Releases** репозитория → выбрать сборку **build-N**).
 
-### 2) Локально
+Собрать вручную:
 
-Требования: JDK 17, Gradle 8.1.1 (для мода), Maven 3.9+ (для плагина).
+Требования: JDK 17, Gradle 8.8 (для мода, через встроенный `gradlew`), Maven 3.9+ (для плагина).
 
 ```bash
 # мод
