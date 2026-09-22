@@ -101,11 +101,37 @@ jobs:
           ls -la artifacts/mod artifacts/plugin || true
 
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: build-${{ github.run_number }}
-          name: "HWIDAdmin build ${{ github.run_number }}"
-          body: "Auto-built from commit ${{ github.sha }} (branch ${{ github.ref_name }}). Mod = Forge 1.20.1 client; plugin = Spigot/Paper 1.20.1."
-          files: |
-            artifacts/mod/*.jar
-            artifacts/plugin/*.jar
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPO="$GITHUB_REPOSITORY"
+          TAG="build-$GITHUB_RUN_NUMBER"
+
+          # 1) Create the tag for this build (skip if exists).
+          gh api -X POST "repos/$REPO/git/refs" \
+            -f ref="refs/tags/$TAG" -f sha="$GITHUB_SHA" >/dev/null 2>&1 || true
+
+          # 2) Create the release.
+          echo "-> creating release $TAG"
+          gh api -X POST "repos/$REPO/releases" \
+            -f tag_name="$TAG" \
+            -f name="HWIDAdmin build $GITHUB_RUN_NUMBER" \
+            -f body="Auto-built from commit $GITHUB_SHA (branch $GITHUB_REF_NAME)." \
+            >/tmp/rel.json 2>/tmp/rel.err || { echo "::error::release create failed: $(head -c 400 /tmp/rel.err)"; exit 1; }
+          cat /tmp/rel.json | head -c 300; echo
+          RLID="$(python3 -c "import json;print(json.load(open('/tmp/rel.json')).get('id',''))" 2>/dev/null || true)"
+          if [ -z "$RLID" ]; then echo "::error::no release id"; exit 1; fi
+
+          # 3) Upload each jar as an asset.
+          for f in artifacts/mod/*.jar artifacts/plugin/*.jar; do
+            echo "-> uploading $(basename "$f")"
+            gh api -X POST \
+              "$(python3 -c "import json;print(json.load(open('/tmp/rel.json'))['upload_url'].split('{')[0])")?name=$(basename "$f")" \
+              -H "Content-Type: application/octet-stream" \
+              --input "$f" >/tmp/up.json 2>/tmp/up.err || { echo "::error::asset upload failed for $(basename "$f"): $(head -c 400 /tmp/up.err)"; exit 1; }
+            echo "   -> $(python3 -c "import json;d=json.load(open('/tmp/up.json'));print(d.get('name'), d.get('size'))" 2>/dev/null || true)"
+          done
+
+          echo "-> release ready:"
+          gh api "repos/$REPO/releases/tags/$TAG" --jq '.html_url'
+          gh api "repos/$REPO/releases/tags/$TAG" --jq '.assets[] | .browser_download_url' 2>/dev/null || true
