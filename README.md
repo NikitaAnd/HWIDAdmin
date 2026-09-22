@@ -34,8 +34,8 @@ scripts/          — служебные скрипты
 | 1.19.4 | 45.4.0 | 17 | 8.8 | SimpleChannel (NetworkRegistry) |
 | 1.20.1 | 47.2.0 | 17 | 8.8 | SimpleChannel (NetworkRegistry) |
 | 1.20.4 | 49.2.0 | 17 | 8.12.1 | SimpleChannel (ChannelBuilder) |
-| 1.21.1 | 52.1.0 | 21 | 8.12.1 | SimpleChannel (ChannelBuilder) |
-| 1.21.4 | 54.1.14 | 21 | 8.12.1 | SimpleChannel (ChannelBuilder) |
+| 1.21.1 | 52.1.0 | 21 | 9.7.1 | SimpleChannel (ChannelBuilder) |
+| 1.21.4 | 54.1.14 | 21 | 9.7.1 | SimpleChannel (ChannelBuilder) |
 
 ## Сборка
 
