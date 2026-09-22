@@ -37,6 +37,23 @@ kick-unlisted: true
 # Printed to the kicked player.
 kick-message: "&cДоступ запрещён: твой HWID не в белом списке."
 
-# Permissions:
+# WHO the HWID check applies to.
+# The check (and the kick) runs ONLY for "protected" players. A player is
+# protected when they are a server OP and/or hold any permission listed in
+# `required-permissions` below. Regular players are completely ignored.
+
+# Should server OPs be protected?
+check-op: true
+
+# Permission nodes that also make a player protected (checked with the server's
+# permission system, so LuckPerms etc. work out of the box). Empty list = only
+# `check-op` matters.
+# Example:
+# required-permissions:
+#   - "some.group.admin"
+#   - "server.admin"
+required-permissions: []
+
+# Permissions granted by this plugin itself (see plugin.yml):
 #   hwidadmin.reload  — use /hwidadmin reload
 #   hwidadmin.status  — use /hwidadmin status
