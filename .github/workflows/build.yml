@@ -101,29 +101,12 @@ jobs:
           ls -la artifacts/mod artifacts/plugin || true
 
       - name: Publish rolling release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -uo pipefail
-          REPO="$GITHUB_REPOSITORY"
-
-          echo "-> cleaning stale release/tag 'latest'"
-          gh release delete latest --repo "$REPO" --cleanup-tag --yes 2>/dev/null || echo "   (no stale release or tag)"
-          sleep 2
-
-          echo "-> creating release"
-          gh release create latest \
-            --repo "$REPO" \
-            --title "HWIDAdmin build $GITHUB_RUN_NUMBER" \
-            --notes "Auto-built from commit $GITHUB_SHA. Mod = Forge 1.20.1 client; plugin = Spigot/Paper 1.20.1." \
-            artifacts/mod/*.jar artifacts/plugin/*.jar \
-            2>&1 | tee /tmp/release-create.log
-          rc="${PIPESTATUS[0]}"
-          if [ "$rc" -ne 0 ]; then
-            echo "::error::gh release create exited with $rc:"
-            tail -n 40 /tmp/release-create.log | while IFS= read -r l; do echo "::error::$l"; done
-            exit "$rc"
-          fi
-
-          echo "-> done. Release assets:"
-          gh api "repos/$REPO/releases/tags/latest" --jq '.assets[] | .name + " (" + (.size|tostring) + " bytes)  " + .browser_download_url' 2>/dev/null || true
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          target_commitish: ${{ github.sha }}
+          name: "HWIDAdmin build ${{ github.run_number }}"
+          body: "Auto-built from commit ${{ github.sha }}. Mod = Forge 1.20.1 client; plugin = Spigot/Paper 1.20.1."
+          files: |
+            artifacts/mod/*.jar
+            artifacts/plugin/*.jar
