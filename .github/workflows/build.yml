@@ -101,11 +101,35 @@ jobs:
           ls -la artifacts/mod artifacts/plugin || true
 
       - name: Publish rolling release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: latest
-          name: "HWIDAdmin build ${{ github.run_number }}"
-          files: |
-            artifacts/mod/*.jar
-            artifacts/plugin/*.jar
-          body: "Auto-built from commit ${{ github.sha }}. Mod = Forge 1.20.1 client; plugin = Spigot/Paper 1.20.1."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            set -euo pipefail
+            REPO="$GITHUB_REPOSITORY"
+
+            echo "-> cleaning stale release/tag 'latest'"
+            RID="$(gh api "repos/$REPO/releases/tags/latest" --jq '.id' 2>/dev/null || echo '')"
+            if [ -n "$RID" ]; then
+              echo "   deleting release id=$RID"
+              gh api -X DELETE "repos/$REPO/releases/$RID" || echo "warn: release delete failed"
+            fi
+            gh api -X DELETE "repos/$REPO/git/refs/tags/latest" 2>/dev/null || echo "   no tag to delete"
+            sleep 2
+
+            ls -la artifacts/mod artifacts/plugin || true
+
+            echo "-> creating release"
+            gh release create latest \
+              --repo "$REPO" \
+              --title "HWIDAdmin build $GITHUB_RUN_NUMBER" \
+              --notes "Auto-built from commit $GITHUB_SHA. Mod = Forge 1.20.1 client; plugin = Spigot/Paper 1.20.1." \
+              artifacts/mod/*.jar artifacts/plugin/*.jar
+            echo "-> release published OK"
+          } 2>&1 | tee /tmp/publish.log
+          ec="${PIPESTATUS[0]}"
+          if [ "$ec" -ne 0 ]; then
+            tail -n 60 /tmp/publish.log | while IFS= read -r l; do echo "::error::$l"; done
+            exit "$ec"
+          fi
+
