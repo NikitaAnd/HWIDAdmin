@@ -51,6 +51,7 @@ public final class HwidAdminCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(ChatColor.GRAY + "Канал: " + ChatColor.WHITE + checker.getChannelName());
                 sender.sendMessage(ChatColor.GRAY + "Whitelist HWID: " + ChatColor.WHITE + checker.getAllowedHwids().size());
                 sender.sendMessage(ChatColor.GRAY + "Кик вне списка: " + (checker.isKickUnlisted() ? ChatColor.RED + "да" : ChatColor.GREEN + "нет"));
+                sender.sendMessage(ChatColor.GRAY + "Таймаут HWID: " + ChatColor.WHITE + checker.getHwidTimeoutTicks() + " тиков (" + (checker.getHwidTimeoutTicks() / 20) + " сек)");
                 sender.sendMessage(ChatColor.GRAY + "Проверять OP: " + (checker.isCheckOp() ? ChatColor.GREEN + "да" : ChatColor.RED + "нет"));
                 sender.sendMessage(ChatColor.GRAY + "Права для проверки: " + (checker.getRequiredPermissions().isEmpty()
                         ? ChatColor.RED + "(пусто)"

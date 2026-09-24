@@ -34,8 +34,18 @@ allowed-hwids:
 #  false -> just log + warn, let the player stay.
 kick-unlisted: true
 
-# Printed to the kicked player.
+# Printed to the kicked player when their HWID is not in the whitelist.
 kick-message: "&cДоступ запрещён: твой HWID не в белом списке."
+
+# Printed to the kicked player when no HWID was received at all (the client
+# mod is not installed or did not respond within the timeout).
+no-hwid-kick-message: "&cДоступ запрещён: HWID не подтверждён. Установите мод HWIDAdmin."
+
+# How many ticks (20 ticks = 1 second) to wait for a HWID packet from a
+# protected player after they join. If no valid HWID arrives within this
+# window, the player is kicked with the `no-hwid-kick-message` above.
+# Minimum: 20 (1 second). Default: 60 (3 seconds).
+hwid-timeout-ticks: 60
 
 # WHO the HWID check applies to.
 # The check (and the kick) runs ONLY for "protected" players. A player is

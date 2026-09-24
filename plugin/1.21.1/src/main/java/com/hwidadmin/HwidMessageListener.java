@@ -54,11 +54,13 @@ public final class HwidMessageListener implements PluginMessageListener {
         }
 
         if (checker.isAllowed(hwid)) {
-            plugin.getLogger().info("HWID OK " + player.getName() + " (hwid=" + hwid + ")");
+            plugin.getLogger().info("HWID OK " + player.getName() + " (hwid=" + hwid.substring(0, Math.min(8, hwid.length())) + "...)");
+            // Mark as verified — cancel any pending kick.
+            plugin.verifyPlayer(player.getUniqueId());
             return;
         }
 
-        plugin.getLogger().warning("Unwhitelisted HWID from " + player.getName() + " — kicked. HWID: " + hwid);
+        plugin.getLogger().warning("Unwhitelisted HWID from " + player.getName() + " — kicked. HWID: " + hwid.substring(0, Math.min(8, hwid.length())) + "...");
 
         if (checker.isKickUnlisted()) {
             final String reason = org.bukkit.ChatColor.translateAlternateColorCodes('&', checker.getKickMessage());

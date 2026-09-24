@@ -24,6 +24,8 @@ public final class HwidChecker {
     private volatile Set<String> allowedHwids = Collections.emptySet();
     private volatile boolean kickUnlisted = true;
     private volatile String kickMessage = "&cДоступ запрещён: твой HWID не в белом списке.";
+    private volatile String noHwidKickMessage = "&cДоступ запрещён: HWID не подтверждён. Установите мод HWIDAdmin.";
+    private volatile long hwidTimeoutTicks = 60L;
     private volatile boolean checkOp = true;
     private volatile Set<String> requiredPermissions = Collections.emptySet();
 
@@ -64,6 +66,13 @@ public final class HwidChecker {
 
         kickUnlisted = cfg.getBoolean("kick-unlisted", true);
         kickMessage = cfg.getString("kick-message", "&cДоступ запрещён: твой HWID не в белом списке.");
+        noHwidKickMessage = cfg.getString("no-hwid-kick-message",
+                "&cДоступ запрещён: HWID не подтверждён. Установите мод HWIDAdmin.");
+
+        hwidTimeoutTicks = cfg.getLong("hwid-timeout-ticks", 60L);
+        if (hwidTimeoutTicks < 20L) {
+            hwidTimeoutTicks = 20L; // minimum 1 second
+        }
 
         checkOp = cfg.getBoolean("check-op", true);
 
@@ -92,6 +101,14 @@ public final class HwidChecker {
         return kickMessage;
     }
 
+    public String getNoHwidKickMessage() {
+        return noHwidKickMessage;
+    }
+
+    public long getHwidTimeoutTicks() {
+        return hwidTimeoutTicks;
+    }
+
     public boolean isCheckOp() {
         return checkOp;
     }
@@ -103,7 +120,7 @@ public final class HwidChecker {
     /**
      * True when the player must pass the HWID check: either a server OP, or
      * holding at least one of the permission nodes from {@code required-permissions}.
-     * Everyone else is ignored by the HWID check.
+     * Everyone else is ignored.
      */
     public boolean isProtected(Player player) {
         if (checkOp && player.isOp()) {
